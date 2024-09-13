@@ -5,7 +5,6 @@ import torch.optim as optim
 # 단순한 모델 정의
 model = nn.Linear(1, 1)
 
-
 criterion = nn.MSELoss()  # Mean Squared Error Loss
 optimizer = optim.SGD(model.parameters(), lr=0.01)
 
