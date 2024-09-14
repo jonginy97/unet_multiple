@@ -10,14 +10,14 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 
-class JaxaDetection(torchvision.datasets.CocoDetection):
+class JaxaDataset(torchvision.datasets.CocoDetection):
     def __init__(self, img_folder, ann_file, transforms, return_masks):
-        super(JaxaDetection, self).__init__(img_folder, ann_file)
+        super(JaxaDataset, self).__init__(img_folder, ann_file)
         self._transforms = transforms
         self.prepare = ConvertJaxaPolysToMask(return_masks)
 
     def __getitem__(self, idx):
-        img, target = super(JaxaDetection, self).__getitem__(idx)
+        img, target = super(JaxaDataset, self).__getitem__(idx)
         image_id = self.ids[idx]
         target = {'image_id': image_id, 'annotations': target}
         img, target = self.prepare(img, target)
@@ -127,42 +127,45 @@ def build(data_path, return_masks=False):
     img_folder = root / "images"
     ann_file = root / "annotations.json"
 
-    dataset = JaxaDetection(img_folder, ann_file, transforms=make_Jaxa_transforms(), return_masks=return_masks)
+    dataset = JaxaDataset(img_folder, ann_file, transforms=make_Jaxa_transforms(), return_masks=return_masks)
     return dataset
 
 
-# 메인 실행 부분
-if __name__ == "__main__":
-    data_path = "C:/Users/YOON JONGIN/Desktop/workspace/unet_multiple/data/jaxa_dataset"
-    dataset = build(data_path, return_masks=True)
+# # 메인 실행 부분
+# if __name__ == "__main__":
+#     data_path = "./data/jaxa_dataset/"
+#     dataset = build(data_path, return_masks=True)
 
-    # DataLoader 설정
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+#     # DataLoader 설정
+#     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
 
-    # 데이터 불러오기 예시
-    for images, targets in dataloader:
-        print("Images shape:", [img.shape for img in images])
-        # print("Targets:", targets)
-        # image shape torch.Size([1, 3, 299, 299])
-        # 보여주기
-
-
-        img = images[0].permute(1, 2, 0).numpy()
-        plt.imshow(img)
-        plt.show()
-
-        masks = targets['masks']
-        print("Masks shape:", masks.shape)
-        # Masks shape: torch.Size([1, 2, 299, 299])
-        # 보여주기
-        mask = masks[0, 0].numpy()
-        plt.imshow(mask)
-        plt.show()
-
-        mask = masks[0, 1].numpy()
-        plt.imshow(mask)
-        plt.show()
+#     # 데이터 불러오기 예시
+#     n = 0
+#     for images, targets in dataloader:
+#         print("Images shape:", [img.shape for img in images])
+#         # print("Targets:", targets)
+#         # image shape torch.Size([1, 3, 299, 299])
+#         # 보여주기
 
 
+#         img = images[0].permute(1, 2, 0).numpy()
+#         plt.imshow(img)
+#         plt.show()
 
-        break  # 첫 번째 배치만 확인
+#         masks = targets['masks']
+#         print("Masks shape:", masks.shape)
+#         # Masks shape: torch.Size([1, 2, 299, 299])
+#         # 보여주기
+#         if len(masks) == 
+#         mask = masks[0, 0].numpy()
+#         plt.imshow(mask)
+#         plt.show()
+
+#         mask = masks[0, 1].numpy()
+#         plt.imshow(mask)
+#         plt.show()
+
+
+#         n =+ 1 
+#         if n == 3: 
+#             break  # 첫 번째 배치만 확인
