@@ -289,3 +289,19 @@ if __name__ == "__main__":
             running_loss += loss.item()
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(dataloader)}")
+
+
+    # 훈련된 모델로 이미지 세그멘테이션 수행
+    model.eval()
+
+    # 이미지와 마스크 시각화
+    img, target = dataset[0]
+    img = img.unsqueeze(0).to(device)
+    output = model(img)
+    output = F.softmax(output, dim=1)
+    output = torch.argmax(output, dim=1).squeeze(0).cpu().numpy()
+
+    # 마스크 시각화
+    plt.imshow(output)
+    plt.show()
+    
