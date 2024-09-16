@@ -4,9 +4,7 @@ import torch.utils.data
 import torchvision
 from pycocotools import mask as Jaxa_mask
 import torchvision.transforms as T
-
 from PIL import Image
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -39,10 +37,12 @@ def convert_Jaxa_poly_to_mask(segmentations, height, width):
         mask = torch.as_tensor(mask, dtype=torch.uint8)
         mask = mask.any(dim=2)
         masks.append(mask)
+    
+    # 마스크가 없을 경우 기본 빈 마스크 생성
     if masks:
         masks = torch.stack(masks, dim=0)
     else:
-        masks = torch.zeros((0, height, width), dtype=torch.uint8)
+        masks = torch.zeros((1, height, width), dtype=torch.uint8)
     return masks
 
 
@@ -70,7 +70,10 @@ class ConvertJaxaPolysToMask(object):
 
         if self.return_masks:
             segmentations = [obj["segmentation"] for obj in anno]
-            masks = convert_Jaxa_poly_to_mask(segmentations, h, w)
+            if segmentations:
+                masks = convert_Jaxa_poly_to_mask(segmentations, h, w)
+            else:
+                masks = torch.zeros((1, h, w), dtype=torch.uint8)  # 마스크가 없을 경우 빈 마스크 생성
 
         keypoints = None
         if anno and "keypoints" in anno[0]:
@@ -86,7 +89,7 @@ class ConvertJaxaPolysToMask(object):
         boxes = boxes[keep]
         classes = classes[keep]
         if self.return_masks:
-            masks = masks[keep]
+            masks = masks[keep] if len(masks) > 0 else torch.zeros((1, h, w), dtype=torch.uint8)
         if keypoints is not None:
             keypoints = keypoints[keep]
         if poses:
