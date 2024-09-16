@@ -235,7 +235,7 @@ if __name__ == "__main__":
 
     # 모델, 손실 함수, 옵티마이저 정의
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=3, out_channels=2)  # output 채널을 2로 유지
+    model = UNet(in_channels=3, out_channels=3)  # output 채널을 2로 유지
     model.to(device)
 
     # 모델 구조 요약
@@ -248,23 +248,24 @@ if __name__ == "__main__":
     num_epochs = args.epochs
     model.train()
 
+    # 학습 루프에서 마스크 결합 부분 수정
     for epoch in range(num_epochs):
         running_loss = 0.0
         for images, targets in dataloader:
-            # 이미지와 마스크를 리스트에서 꺼내서 처리
             images = [img.to(device) for img in images]
             masks = [tgt['masks'].to(device) for tgt in targets]
 
             # 이미지들을 스택하여 배치 텐서로 변환
             images = torch.stack(images)
 
-            # **마스크들을 이진 마스크로 변환**
-            # 각 이미지의 마스크들을 논리적 OR로 결합하여 하나의 이진 마스크 생성
+            # 각 객체의 마스크를 해당 객체의 클래스 인덱스 값으로 변환
             masks_combined = []
-            for mask in masks:
-                # 마스크의 크기: [num_objects, height, width]
-                combined_mask = torch.any(mask, dim=0).long()  # 값은 0 또는 1
+            for mask, target in zip(masks, targets):
+                combined_mask = torch.zeros(mask.shape[1:], dtype=torch.long, device=device)  # 배경은 0으로 초기화
+                for idx, m in enumerate(mask):
+                    combined_mask[m.bool()] = idx + 1  # 각 객체에 대해 1부터 시작하는 클래스 인덱스 할당
                 masks_combined.append(combined_mask)
+
 
             # 마스크들을 스택하여 배치 텐서로 변환
             masks = torch.stack(masks_combined)  # [batch_size, height, width]
@@ -273,7 +274,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             # 모델 출력과 손실 계산 (raw logits 반환)
-            outputs = model(images)  # outputs 크기: [batch_size, 2, height, width]
+            outputs = model(images)  # outputs 크기: [batch_size, num_classes, height, width]
 
             # 출력과 마스크의 크기를 맞춰 손실 계산
             if outputs.size()[2:] != masks.size()[1:]:
@@ -288,4 +289,3 @@ if __name__ == "__main__":
             running_loss += loss.item()
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(dataloader)}")
-        #break  # 전체 에포크를 실행하려면 이 줄을 주석 처리하세요.
