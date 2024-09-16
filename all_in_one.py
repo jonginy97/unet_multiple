@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class UNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=1, init_features=64):
+    def __init__(self, in_channels=3, out_channels=2, init_features=64):  # out_channels=2로 유지
         super(UNet, self).__init__()
         
         features = init_features
@@ -109,7 +109,6 @@ class JaxaDataset(torchvision.datasets.CocoDetection):
 
         return img, target
 
-
 def convert_Jaxa_poly_to_mask(segmentations, height, width):
     masks = []
     for polygons in segmentations:
@@ -127,7 +126,6 @@ def convert_Jaxa_poly_to_mask(segmentations, height, width):
     else:
         masks = torch.zeros((1, height, width), dtype=torch.uint8)
     return masks
-
 
 class ConvertJaxaPolysToMask(object):
     def __init__(self, return_masks=False):
@@ -199,14 +197,12 @@ class ConvertJaxaPolysToMask(object):
 
         return image, target
 
-
 def make_Jaxa_transforms():
     transforms = T.Compose([
         T.Resize((299, 299)),  # 이미지와 마스크를 299x299 크기로 통일
         T.ToTensor(),
     ])
     return transforms
-
 
 def build(data_path, return_masks=False):
     root = Path(data_path)
@@ -217,6 +213,10 @@ def build(data_path, return_masks=False):
     dataset = JaxaDataset(img_folder, ann_file, transforms=make_Jaxa_transforms(), return_masks=return_masks)
     return dataset
 
+# Custom collate function 정의
+def collate_fn(batch):
+    images, targets = list(zip(*batch))
+    return images, targets
 
 # 학습 스크립트
 if __name__ == "__main__":
@@ -230,17 +230,18 @@ if __name__ == "__main__":
     # 데이터셋 로드 및 DataLoader 설정
     data_path = args.data_path
     dataset = build(data_path, return_masks=True)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    # DataLoader에 custom collate function 적용
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     # 모델, 손실 함수, 옵티마이저 정의
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=3, out_channels=1)  # output 채널을 1로 변경 (이진 분류)
+    model = UNet(in_channels=3, out_channels=2)  # output 채널을 2로 유지
     model.to(device)
 
     # 모델 구조 요약
     summary(model, (3, 299, 299))  # 이미지 크기에 맞게 수정
 
-    criterion = nn.BCEWithLogitsLoss()  # 이진 분류를 위한 손실 함수 사용
+    criterion = nn.CrossEntropyLoss()  # 손실 함수를 CrossEntropyLoss로 유지
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     # 학습
@@ -250,26 +251,35 @@ if __name__ == "__main__":
     for epoch in range(num_epochs):
         running_loss = 0.0
         for images, targets in dataloader:
-            images = images.to(device)
-            masks = targets['masks'].to(device)
+            # 이미지와 마스크를 리스트에서 꺼내서 처리
+            images = [img.to(device) for img in images]
+            masks = [tgt['masks'].to(device) for tgt in targets]
 
-            # 타겟 마스크의 차원을 [batch_size, 1, height, width]로 맞춤
-            if masks.dim() == 3:
-                masks = masks.unsqueeze(1)  # [batch_size, 1, height, width]로 변환
-            elif masks.shape[1] > 1:
-                masks = masks[:, 0:1, :, :]  # 첫 번째 채널만 선택
-            masks = masks.float()  # BCEWithLogitsLoss는 float 타입을 기대하므로 변환
+            # 이미지들을 스택하여 배치 텐서로 변환
+            images = torch.stack(images)
+
+            # **마스크들을 이진 마스크로 변환**
+            # 각 이미지의 마스크들을 논리적 OR로 결합하여 하나의 이진 마스크 생성
+            masks_combined = []
+            for mask in masks:
+                # 마스크의 크기: [num_objects, height, width]
+                combined_mask = torch.any(mask, dim=0).long()  # 값은 0 또는 1
+                masks_combined.append(combined_mask)
+
+            # 마스크들을 스택하여 배치 텐서로 변환
+            masks = torch.stack(masks_combined)  # [batch_size, height, width]
 
             # 옵티마이저 초기화
             optimizer.zero_grad()
 
             # 모델 출력과 손실 계산 (raw logits 반환)
-            outputs = model(images)
+            outputs = model(images)  # outputs 크기: [batch_size, 2, height, width]
 
-            # 출력과 타겟 마스크의 크기를 맞춰 손실 계산
-            if outputs.size() != masks.size():
-                outputs = F.interpolate(outputs, size=masks.shape[2:], mode='bilinear', align_corners=False)
-            loss = criterion(outputs, masks)
+            # 출력과 마스크의 크기를 맞춰 손실 계산
+            if outputs.size()[2:] != masks.size()[1:]:
+                outputs = F.interpolate(outputs, size=masks.shape[1:], mode='bilinear', align_corners=False)
+
+            loss = criterion(outputs, masks)  # CrossEntropyLoss 사용
 
             # 역전파와 최적화
             loss.backward()
@@ -278,4 +288,4 @@ if __name__ == "__main__":
             running_loss += loss.item()
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(dataloader)}")
-        break
+        #break  # 전체 에포크를 실행하려면 이 줄을 주석 처리하세요.
