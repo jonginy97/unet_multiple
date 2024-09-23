@@ -1,12 +1,18 @@
-from pathlib import Path
+import argparse
 import torch
-import torch.utils.data
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torchsummary import summary
+from pathlib import Path
 import torchvision
 from pycocotools import mask as Jaxa_mask
 import torchvision.transforms as T
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 class JaxaDataset(torchvision.datasets.CocoDetection):
     def __init__(self, img_folder, ann_file, transforms, return_masks):
@@ -26,7 +32,6 @@ class JaxaDataset(torchvision.datasets.CocoDetection):
 
         return img, target
 
-
 def convert_Jaxa_poly_to_mask(segmentations, height, width):
     masks = []
     for polygons in segmentations:
@@ -44,7 +49,6 @@ def convert_Jaxa_poly_to_mask(segmentations, height, width):
     else:
         masks = torch.zeros((1, height, width), dtype=torch.uint8)
     return masks
-
 
 class ConvertJaxaPolysToMask(object):
     def __init__(self, return_masks=False):
@@ -116,13 +120,12 @@ class ConvertJaxaPolysToMask(object):
 
         return image, target
 
-
 def make_Jaxa_transforms():
-    normalize = T.Compose([
+    transforms = T.Compose([
+        T.Resize((299, 299)),  # 이미지와 마스크를 299x299 크기로 통일
         T.ToTensor(),
     ])
-    return normalize
-
+    return transforms
 
 def build(data_path, return_masks=False):
     root = Path(data_path)
@@ -133,42 +136,15 @@ def build(data_path, return_masks=False):
     dataset = JaxaDataset(img_folder, ann_file, transforms=make_Jaxa_transforms(), return_masks=return_masks)
     return dataset
 
-
-# # 메인 실행 부분
-# if __name__ == "__main__":
-#     data_path = "./data/jaxa_dataset/"
-#     dataset = build(data_path, return_masks=True)
-
-#     # DataLoader 설정
-#     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
-
-#     # 데이터 불러오기 예시
-#     n = 0
-#     for images, targets in dataloader:
-#         print("Images shape:", [img.shape for img in images])
-#         # print("Targets:", targets)
-#         # image shape torch.Size([1, 3, 299, 299])
-#         # 보여주기
+# Custom collate function 정의
+def collate_fn(batch):
+    images, targets = list(zip(*batch))
+    return images, targets
 
 
-#         img = images[0].permute(1, 2, 0).numpy()
-#         plt.imshow(img)
-#         plt.show()
-
-#         masks = targets['masks']
-#         print("Masks shape:", masks.shape)
-#         # Masks shape: torch.Size([1, 2, 299, 299])
-#         # 보여주기
-#         if len(masks) == 
-#         mask = masks[0, 0].numpy()
-#         plt.imshow(mask)
-#         plt.show()
-
-#         mask = masks[0, 1].numpy()
-#         plt.imshow(mask)
-#         plt.show()
-
-
-#         n =+ 1 
-#         if n == 3: 
-#             break  # 첫 번째 배치만 확인
+if __name__ == "__main__":
+    # Jaxa 데이터셋 경로
+    data_path = './data/jaxa_dataset'
+    dataset = build(data_path, return_masks=True)
+    print(f"Number of samples: {len(dataset)}")
+    

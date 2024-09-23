@@ -13,6 +13,9 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+# model.py
+
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=2, init_features=64):  # out_channels=2로 유지
         super(UNet, self).__init__()
@@ -89,6 +92,8 @@ class UNet(nn.Module):
 
         # No activation function, raw logits
         return self.final_conv(dec1)
+
+# dataset.py
 
 # JaxaDataset 정의
 class JaxaDataset(torchvision.datasets.CocoDetection):
@@ -217,6 +222,8 @@ def build(data_path, return_masks=False):
 def collate_fn(batch):
     images, targets = list(zip(*batch))
     return images, targets
+
+# main.py
 
 # 학습 스크립트
 if __name__ == "__main__":
