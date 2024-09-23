@@ -15,6 +15,7 @@ import numpy as np
 
 from datasets import build, collate_fn
 from models import UNet
+from unet_trans import UNet_tr
 
 
 
@@ -35,7 +36,7 @@ if __name__ == "__main__":
 
     # 모델, 손실 함수, 옵티마이저 정의
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=3, out_channels=3)
+    model = UNet_tr(in_channels=3, out_channels=3)  # output 채널을 2로 유지
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()  # 손실 함수를 CrossEntropyLoss로 유지
