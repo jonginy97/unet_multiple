@@ -38,8 +38,6 @@ optimizer.step()       # 옵티마이저를 통해 가중치 업데이트
 # dLoss/db = -2 * 1 * -1 = 2
 
 
-
-
 # Updated weights and bias
 
 print(f'Updated weights: {model.weight.data}')
