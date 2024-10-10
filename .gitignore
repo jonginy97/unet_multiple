@@ -1,2 +1,3 @@
 /data/*
 !/data/jaxa_dataset
+!/data/jaxa_100samples_720

@@ -15,20 +15,20 @@ import numpy as np
 
 from datasets import build, collate_fn
 from models import UNet
-from unet_trans import UNet_tr
+from models import UNet_tr
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="U-Net Segmentation")
-    parser.add_argument('--data-path', type=str, default="./data/jaxa_dataset", help='Path to dataset')
-    parser.add_argument('--batch-size', type=int, default=4, help='Batch size for training')
-    parser.add_argument('--epochs', type=int, default=20, help='Number of training epochs')
+    parser.add_argument('--data-path', type=str, default="./data/jaxa_100samples_720", help='Path to dataset')
+    parser.add_argument('--batch-size', type=int, default=16, help='Batch size for training')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for optimizer')
     args = parser.parse_args()
 
 
     data_path = args.data_path
     dataset = build(data_path, return_masks=True)
-    # DataLoader에 custom collate function 적용
+
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
