@@ -122,7 +122,7 @@ class ConvertJaxaPolysToMask(object):
 
 def make_Jaxa_transforms():
     transforms = T.Compose([
-        T.Resize((299, 299)),  # 이미지와 마스크를 299x299 크기로 통일
+        T.Resize((720, 720)),  # 이미지와 마스크를 299x299 크기로 통일
         T.ToTensor(),
     ])
     return transforms

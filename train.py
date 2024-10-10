@@ -32,7 +32,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet_tr(in_channels=3, out_channels=3)
+    model = UNet(in_channels=3, out_channels=3)
     # for multi-gpu
     if torch.cuda.device_count() > 1:
         print("Using", torch.cuda.device_count(), "GPUs!")
