@@ -124,6 +124,9 @@ def make_Jaxa_transforms():
     transforms = T.Compose([
         T.Resize((720, 720)),  # 이미지와 마스크를 299x299 크기로 통일
         T.ToTensor(),
+        # normalize
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
     ])
     return transforms
 

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="U-Net Segmentation")
     parser.add_argument('--data-path', type=str, default="./data/jaxa_100samples_720", help='Path to dataset')
     parser.add_argument('--batch-size', type=int, default=16, help='Batch size for training')
-    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for optimizer')
     args = parser.parse_args()
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=3, out_channels=3)
+    model = UNet_tr(in_channels=3, out_channels=3)
     # for multi-gpu
     if torch.cuda.device_count() > 1:
         print("Using", torch.cuda.device_count(), "GPUs!")
@@ -59,8 +59,12 @@ if __name__ == "__main__":
             masks_combined = []
             for mask, target in zip(masks, targets):
                 combined_mask = torch.zeros(mask.shape[1:], dtype=torch.long, device=device)  # 배경은 0으로 초기화
-                for idx, m in enumerate(mask):
-                    combined_mask[m.bool()] = idx + 1  # 각 객체에 대해 1부터 시작하는 클래스 인덱스 할당
+                
+                for idx in range(len(target['labels'])):
+                    label = target['labels'][idx]
+                    m = mask[idx]
+                    combined_mask[m.bool()] = label
+
                 masks_combined.append(combined_mask)
 
 
